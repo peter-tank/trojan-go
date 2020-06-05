@@ -1,28 +1,17 @@
 #!/bin/bash
 
-PLATFORMS="darwin/amd64 darwin/386"
+PLATFORMS="linux/mips-srv linux/mips-cli linux/mips"
 PLATFORMS="$PLATFORMS windows/amd64 windows/386"
-PLATFORMS="$PLATFORMS windows/arm"
-PLATFORMS="$PLATFORMS linux/amd64 linux/386"
-PLATFORMS="$PLATFORMS linux/ppc64 linux/ppc64le"
-PLATFORMS="$PLATFORMS linux/mips64 linux/mips64le"
-PLATFORMS="$PLATFORMS linux/mips linux/mipsle"
-PLATFORMS="$PLATFORMS linux/arm64 linux/arm"
-PLATFORMS="$PLATFORMS linux/s390x"
-PLATFORMS="$PLATFORMS dragonfly/amd64"
-PLATFORMS="$PLATFORMS openbsd/arm64 openbsd/arm"
-PLATFORMS="$PLATFORMS openbsd/amd64 openbsd/386"
-PLATFORMS="$PLATFORMS freebsd/amd64 freebsd/386"
-PLATFORMS="$PLATFORMS freebsd/arm64 freebsd/arm"
+PLATFORMS="$PLATFORMS linux/amd64"
+PLATFORMS="$PLATFORMS linux/arm64"
 
 type setopt >/dev/null 2>&1
 
 rm -rd release
-rm -rd temp
+rm -rd ./trojan-go-*
 rm ./*.dat
 
 mkdir release
-mkdir temp
 
 wget https://github.com/v2ray/domain-list-community/raw/release/dlc.dat -O geosite.dat
 wget https://github.com/v2ray/geoip/raw/release/geoip.dat -O geoip.dat
@@ -30,37 +19,61 @@ wget https://github.com/v2ray/geoip/raw/release/geoip.dat -O geoip.dat
 
 SCRIPT_NAME=`basename "$0"`
 FAILURES=""
+SHA="./SHA-1.txt"
 
-for PLATFORM in $PLATFORMS; do
-  GOOS=${PLATFORM%/*}
-  GOARCH=${PLATFORM#*/}
-  ZIP_FILENAME="trojan-go-${GOOS}-${GOARCH}.zip"
-  CMD="CGO_ENABLE=0 GOOS=${GOOS} GOARCH=${GOARCH} go build -tags \"full\" -o temp -ldflags=\"-s -w\""
-  echo "${CMD}"
-  eval $CMD || FAILURES="${FAILURES} ${PLATFORM}"
-  zip -j release/$ZIP_FILENAME temp/* ./*.dat
-  zip release/$ZIP_FILENAME example/*
-  sha1sum release/$ZIP_FILENAME >> release/checksum.sha1
-  rm temp/*
+trojan_lite() {
+	git checkout -- "${1}"
+	packages_skip=($2)
+	echo ">>> Enable: simplelog"
+	sed -i "s/\(.*\)\/\/\(_.*\/simplelog\"\)$/\1\2/" "${1}"
+	echo -n ">>> not-buildin modules: "
+	for rmp in ${packages_skip[@]}; do
+		[[ -z "${rmp}" ]] && continue
+		echo -n "${rmp}, "
+		sed -i "/.*\/"${rmp}"\"$/d" "${1}"
+	done
+	echo
+	[ $? -eq 0 ] || cat -n "${1}"
+}
+
+for PLATFORM in ${PLATFORMS}; do
+  GOOS="${PLATFORM%/*}"
+  GOARCH="${PLATFORM#*/}"
+  SUB="${GOARCH#*-}"
+  GOARCH="${GOARCH%-*}"
+  LITE="mysql db redis golog"
+  CGO=0
+  case ${SUB} in
+    "cli" ) LITE+=" cert relay service control mixed server";;
+    "srv" ) LITE+=" service control mixed client";;
+    "cgo" ) CGO=1;;
+    * ) SUB="";;
+  esac
+  trojan_lite "main.go" "${LITE}"
+  DST="trojan-go-${GOOS}-${GOARCH}"
+  ZIP_FILENAME="${DST}.zip"
+  [ -d "${DST}" ] || mkdir "${DST}"
+  CMD="CGO_ENABLE=${CGO} GOOS=${GOOS} GOARCH=${GOARCH} go build -o \"${DST}\" $@ -ldflags=\"-s -w\""
+  echo "${CMD}" >> ./new_bin
+  eval $CMD || FAILURES="${FAILURES} ${CMD}"
+  BIN=$(find "${DST}" -maxdepth 1 -name "trojan-go*" -type f -executable -newer ./new_bin)
+  if [ -n "${SUB}" ]; then
+    mv "${BIN}" "${BIN}${SUB:+-${SUB}}"
+    BIN="${BIN}${SUB:+-${SUB}}"
+  fi
+  LITE=$(find "${DST}" -maxdepth 1 -name "trojan-go*-*" -type f -executable)
+  [ -z "${LITE}" ] || upx -q --ultra-brute -o "${BIN}_upx" "${BIN}"
+  if [ -z "${SUB}" ]; then
+    echo ">>> ${ZIP_FILENAME}"
+    zip -du release/${ZIP_FILENAME} -j ${DST}/*
+    zip release/${ZIP_FILENAME} example/*
+  fi
 done
-
-# arm
-PLATFORMS_ARM="windows linux freebsd netbsd"
-for GOOS in $PLATFORMS_ARM; do
-  # build for each ARM version
-  GOARCH="arm"
-  for GOARM in 7 6 5; do
-    ZIP_FILENAME="trojan-go-${GOOS}-${GOARCH}v${GOARM}.zip"
-    CMD="CGO_ENABLE=0 GOARM=${GOARM} GOOS=${GOOS} GOARCH=${GOARCH} go build -tags \"full\" -o temp -ldflags \"-s -w\""
-    echo "${CMD}"
-    eval "${CMD}" || FAILURES="${FAILURES} ${GOOS}/${GOARCH}v${GOARM}" 
-    zip -j release/$ZIP_FILENAME temp/* ./*.dat
-    zip release/$ZIP_FILENAME example/*
-    sha1sum release/$ZIP_FILENAME >> release/checksum.sha1
-    rm temp/*
-  done
-done
-
+sha1sum ./release/*.zip > "${SHA}"
+sha1sum ./trojan-go-*/trojan-go* >> "${SHA}"
+stat -c "%y %s  %n" ./trojan-go-*/trojan-go* >> "${SHA}"
+cat -n "${SHA}"
+sha1sum "${SHA}"
 
 # eval errors
 if [[ "${FAILURES}" != "" ]]; then

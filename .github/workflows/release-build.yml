@@ -1,17 +1,17 @@
 on: 
-  push:
-    tags:
-      - 'v*'
-name: release-build
+  release:
+    types:
+      - created
+
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
       uses: actions/setup-go@v1
       with:
         go-version: 1.14.x
-    - name: Checkout code
+    - name: Checkout - ${{ github.ref }}
       uses: actions/checkout@v2
     - name: Checkout tag
       run: |
@@ -19,20 +19,16 @@ jobs:
         tag_name="${GITHUB_REF##*/}"
         echo Tag $tag_name
         git checkout $tag_name
-    - name: Build
+        sed -i 's/^\(.*Version = \).*$/\1\"'${tag_name}'\"/'  ./common/common.go
+        grep -Hn "Version = " ./common/common.go
+    - name: Customed builds and release
       run: |
         ./build-all.sh
-        set -x
-        assets=()
+        assets=("-a" "SHA-1.txt")
         for asset in ./release/*; do
           assets+=("-a" "$asset")
         done
         tag_name="${GITHUB_REF##*/}"
-        hub release create -p -d "${assets[@]}" -m "$tag_name" "$tag_name"
+        hub release edit -d "${assets[@]}" -m "$tag_name: customed release/upx" "$tag_name"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - name: Upload binary
-      uses: actions/upload-artifact@v1
-      with:
-        name: dist-release
-        path: ./release
