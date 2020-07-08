@@ -127,3 +127,28 @@ func SetOutput(w io.Writer) {
 func RegisterLogger(l Logger) {
 	logger = l
 }
+
+func ShortPath(file string, fn string) (string, string) {
+	depth := 2
+	short := file
+	for i := len(file) - 1; i > 0; i-- {
+		if file[i] == '/' {
+			short = file[i+1:]
+			break
+		}
+	}
+	file = short
+
+	short = fn
+	for i := len(fn) - 1; i > 0; i-- {
+		if fn[i] == '/' {
+			short = fn[i+1:]
+			depth--
+			if depth < 0 {
+				break
+			}
+		}
+	}
+
+	return file, short
+}

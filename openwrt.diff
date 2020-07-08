@@ -1,0 +1,21 @@
+--- release.sh	2020-07-07 10:06:14.530234718 +0000
++++ release_openwrt.sh	2020-07-08 10:06:36.936426419 +0000
+@@ -2,12 +2,12 @@
+ 
+ type setopt >/dev/null 2>&1
+ 
+-PLATFORMS="windows/amd64 windows/386"
+-PLATFORMS="$PLATFORMS linux/amd64 linux/armv7 linux/mips64-softfloat linux/mips64le-softfloat openbsd/386"
+-PLATFORMS="$PLATFORMS linux/mips.cli-softfloat linux/mips-softfloat"
+-PLATFORMS="$PLATFORMS linux/mips.cli-hardfloat linux/mips-hardfloat"
+-PLATFORMS="$PLATFORMS android/arm64.router android/arm64"
+-PLATFORMS="$PLATFORMS android/armv7"
++PLATFORMS="linux/386 linux/amd64 linux/arm linux/armv5 linux/armv6 linux/armv7"
++PLATFORMS="$PLATFORMS linux/mips-softfloat linux/mips-hardfloat"
++PLATFORMS="$PLATFORMS linux/mipsle-softfloat linux/mipsle-hardfloat"
++PLATFORMS="$PLATFORMS linux/mips64 linux/mips64-softfloat linux/mips64-hardfloat"
++PLATFORMS="$PLATFORMS linux/mips64le linux/mips64le-softfloat linux/mips64le-hardfloat"
++OP=1
+ 
+ SCRIPT_NAME=`basename "$0"`
+ FAILURES=""

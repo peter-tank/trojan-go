@@ -75,7 +75,7 @@ func (s *Server) packetDispatchLoop() {
 				select {
 				case <-s.ctx.Done():
 				default:
-					log.Fatal(common.NewError("tproxy failed to read from udp socket").Base(err))
+					log.Warn(common.NewError("tproxy failed to read from udp socket").Base(err))
 				}
 				s.Close()
 				return
