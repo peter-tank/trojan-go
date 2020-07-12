@@ -5,6 +5,7 @@ import "github.com/p4gefau1t/trojan-go/config"
 type WebsocketConfig struct {
 	Enabled bool   `json:"enabled" yaml:"enabled"`
 	Host    string `json:"host" yaml:"host"`
+	Host2    string `json:"hostname" yaml:"hostname"`
 	Path    string `json:"path" yaml:"path"`
 }
 

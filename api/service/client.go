@@ -28,12 +28,26 @@ func (s *ClientAPI) GetTraffic(ctx context.Context, req *GetTrafficRequest) (*Ge
 	if req.User == nil {
 		return nil, common.NewError("User is unspecified")
 	}
+	var user statistic.User
 	if req.User.Hash == "" {
-		req.User.Hash = common.SHA224String(req.User.Password)
+		if req.User.Password == "" {
+			for _, u := range s.auth.ListUsers() {
+				user = u
+				break
+			}
+			if user == nil {
+				return nil, common.NewError("no valid user found")
+			}
+		} else {
+			req.User.Hash = common.SHA224String(req.User.Password)
+		}
 	}
-	valid, user := s.auth.AuthUser(req.User.Hash)
-	if !valid {
-		return nil, common.NewError("User " + req.User.Hash + " not found")
+	if user == nil {
+		valid := false
+		valid, user = s.auth.AuthUser(req.User.Hash)
+		if !valid {
+			return nil, common.NewError("User " + req.User.Hash + " not found")
+		}
 	}
 	sent, recv := user.GetTraffic()
 	sentSpeed, recvSpeed := user.GetSpeed()
