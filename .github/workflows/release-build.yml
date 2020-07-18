@@ -1,34 +1,56 @@
 on: 
-  push:
-    tags:
-      - 'v*'
-name: release-build
+  release:
+    types:
+      - created
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  release:
+    runs-on: ubuntu-20.04
     steps:
+    - name: Checkout - ${{ github.ref }}
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: '2'
+
+    - name: Auto Versioning
+      run: |
+        git log -n 1 HEAD~1
+        version="${GITHUB_REF##*/}"
+        commit="$(git rev-parse --short HEAD~1)"
+        constantf="./constant/constant.go"
+        [[ "${version}" =~ - ]] || version+="-g${commit}"
+        [[ "${version}" =~ -cli$ ]] && version+="-g${commit}" || echo ">>> No CLI & UPX Forced"
+        sed -i 's/^\(.*Version = \).*$/\1\"'${version}'\"/'  ${constantf}
+        sed -i 's/^\(.*Commit  = \).*$/\1\"'${commit}'\"/'  ${constantf}
+        echo "Building..."
+        grep -Hn -A1 "Version = " ${constantf}
+
     - name: Install Go
       uses: actions/setup-go@v1
       with:
-        go-version: 1.14.x
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: Checkout tag
+        go-version: 1.15.x
+
+    - name: Customed builds and release
       run: |
-        git fetch --depth=1 origin +refs/tags/*:refs/tags/*
-        tag_name="${GITHUB_REF##*/}"
-        echo Tag $tag_name
-        git checkout $tag_name
-    - name: Build
-      run: |
-        make geosite.dat geoip.dat
-        make release -j$(nproc)
-        set -x
-        assets=()
-        for asset in ./*.zip; do
+        go env
+        go version
+        version="${GITHUB_REF##*/}"
+        [[ "${version}" =~ - ]] || OP=" for openwrt"
+        [[ "${version}" =~ -cli$ ]] && UPX=1 || echo ">>> Not for openwrt release"
+        [ -z "${OP}${UPX}" ] || patch --verbose ./release.sh -i ./openwrt.diff
+        HASH="SHA-1.txt"
+        DST="release"
+        chmod +x ./release.sh
+        #make geosite.dat geoip.dat
+        #make release -j$(nproc)
+        #DST="build"
+        #assets=()
+        ./release.sh "${HASH}" "${DST}" "${UPX}"
+        assets=("-a" "${HASH}")
+        for asset in ${DST}/*; do
           assets+=("-a" "$asset")
         done
         tag_name="${GITHUB_REF##*/}"
-        hub release create -p -d "${assets[@]}" -m "$tag_name" "$tag_name"
+        hub release edit -d "${assets[@]}" -m "$tag_name: customed release${OP}${UPX:+ for openwrt client only(UPXed)}" "$tag_name"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

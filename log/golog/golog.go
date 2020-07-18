@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/p4gefau1t/trojan-go/log"
+	_ "github.com/p4gefau1t/trojan-go/log/tz"
 	"github.com/p4gefau1t/trojan-go/log/golog/colorful"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -37,7 +38,7 @@ type Logger struct {
 	timestamp bool
 	quiet     bool
 	buf       colorful.ColorBuffer
-	logLevel  int
+	logLevel  log.LogLevel
 }
 
 // Prefix struct define plain and color byte
@@ -109,7 +110,7 @@ func New(out FdWriter) *Logger {
 func (l *Logger) SetLogLevel(level log.LogLevel) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.logLevel = int(level)
+	l.logLevel = level
 }
 
 func (l *Logger) SetOutput(w io.Writer) {
@@ -223,8 +224,7 @@ func (l *Logger) Output(depth int, prefix Prefix, data string) error {
 			fn = "<unknown function>"
 			line = 0
 		} else {
-			file = filepath.Base(file)
-			fn = runtime.FuncForPC(pc).Name()
+			file, fn = log.ShortPath(filepath.Base(file), runtime.FuncForPC(pc).Name())
 		}
 	}
 	// Acquire exclusive access to the shared buffer
@@ -294,7 +294,7 @@ func (l *Logger) Output(depth int, prefix Prefix, data string) error {
 
 // Fatal print fatal message to output and quit the application with status 1
 func (l *Logger) Fatal(v ...interface{}) {
-	if l.logLevel <= 4 {
+	if l.logLevel <= log.FatalLevel {
 		l.Output(1, FatalPrefix, fmt.Sprintln(v...))
 	}
 	os.Exit(1)
@@ -303,7 +303,7 @@ func (l *Logger) Fatal(v ...interface{}) {
 // Fatalf print formatted fatal message to output and quit the application
 // with status 1
 func (l *Logger) Fatalf(format string, v ...interface{}) {
-	if l.logLevel <= 4 {
+	if l.logLevel <= log.FatalLevel {
 		l.Output(1, FatalPrefix, fmt.Sprintf(format, v...))
 	}
 	os.Exit(1)
@@ -311,70 +311,70 @@ func (l *Logger) Fatalf(format string, v ...interface{}) {
 
 // Error print error message to output
 func (l *Logger) Error(v ...interface{}) {
-	if l.logLevel <= 3 {
+	if l.logLevel <= log.ErrorLevel {
 		l.Output(1, ErrorPrefix, fmt.Sprintln(v...))
 	}
 }
 
 // Errorf print formatted error message to output
 func (l *Logger) Errorf(format string, v ...interface{}) {
-	if l.logLevel <= 3 {
+	if l.logLevel <= log.ErrorLevel {
 		l.Output(1, ErrorPrefix, fmt.Sprintf(format, v...))
 	}
 }
 
 // Warn print warning message to output
 func (l *Logger) Warn(v ...interface{}) {
-	if l.logLevel <= 2 {
+	if l.logLevel <= log.WarnLevel {
 		l.Output(1, WarnPrefix, fmt.Sprintln(v...))
 	}
 }
 
 // Warnf print formatted warning message to output
 func (l *Logger) Warnf(format string, v ...interface{}) {
-	if l.logLevel <= 2 {
+	if l.logLevel <= log.WarnLevel {
 		l.Output(1, WarnPrefix, fmt.Sprintf(format, v...))
 	}
 }
 
 // Info print informational message to output
 func (l *Logger) Info(v ...interface{}) {
-	if l.logLevel <= 1 {
+	if l.logLevel <= log.InfoLevel {
 		l.Output(1, InfoPrefix, fmt.Sprintln(v...))
 	}
 }
 
 // Infof print formatted informational message to output
 func (l *Logger) Infof(format string, v ...interface{}) {
-	if l.logLevel <= 1 {
+	if l.logLevel <= log.InfoLevel {
 		l.Output(1, InfoPrefix, fmt.Sprintf(format, v...))
 	}
 }
 
 // Debug print debug message to output if debug output enabled
 func (l *Logger) Debug(v ...interface{}) {
-	if l.logLevel == 0 {
+	if l.logLevel <= log.AllLevel {
 		l.Output(1, DebugPrefix, fmt.Sprintln(v...))
 	}
 }
 
 // Debugf print formatted debug message to output if debug output enabled
 func (l *Logger) Debugf(format string, v ...interface{}) {
-	if l.logLevel == 0 {
+	if l.logLevel <= log.AllLevel {
 		l.Output(1, DebugPrefix, fmt.Sprintf(format, v...))
 	}
 }
 
 // Trace print trace message to output if debug output enabled
 func (l *Logger) Trace(v ...interface{}) {
-	if l.logLevel == 0 {
+	if l.logLevel <= log.AllLevel {
 		l.Output(1, TracePrefix, fmt.Sprintln(v...))
 	}
 }
 
 // Tracef print formatted trace message to output if debug output enabled
 func (l *Logger) Tracef(format string, v ...interface{}) {
-	if l.logLevel == 0 {
+	if l.logLevel <= log.AllLevel {
 		l.Output(1, TracePrefix, fmt.Sprintf(format, v...))
 	}
 }
