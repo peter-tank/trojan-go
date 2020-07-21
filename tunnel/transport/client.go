@@ -51,6 +51,10 @@ func NewClient(ctx context.Context, _ tunnel.Client) (*Client, error) {
 
 	var cmd *exec.Cmd
 	serverAddress := tunnel.NewAddressFromHostPort("tcp", cfg.RemoteHost, cfg.RemotePort)
+	if cfg.TransportPlugin.Option == "" && cfg.TransportPlugin.Option2 != "" {
+		cfg.TransportPlugin.Option = cfg.TransportPlugin.Option2
+		log.Error(">>> will drop compactible with option 'plugin_option', use 'option' instead")
+	}
 
 	if cfg.TransportPlugin.Enabled {
 		log.Warn("trojan-go will use transport plugin and work in plain text mode")

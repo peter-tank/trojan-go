@@ -17,6 +17,7 @@ type TransportPluginConfig struct {
 	Type    string   `json:"type" yaml:"type"`
 	Command string   `json:"command" yaml:"command"`
 	Option  string   `json:"option" yaml:"option"`
+	Option2  string   `json:"plugin_option" yaml:"plugin-option"`
 	Arg     []string `json:"arg" yaml:"arg"`
 	Env     []string `json:"env" yaml:"env"`
 }

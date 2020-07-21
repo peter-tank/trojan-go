@@ -1,11 +1,11 @@
 NAME := trojan-go
 PACKAGE_NAME := github.com/p4gefau1t/trojan-go
-VERSION := `git describe --dirty`
-COMMIT := `git rev-parse HEAD`
+VERSION != git describe --dirty
+COMMIT != git rev-parse HEAD
 
 PLATFORM := linux
 BUILD_DIR := build
-VAR_SETTING := -X $(PACKAGE_NAME)/constant.Version=$(VERSION) -X $(PACKAGE_NAME)/constant.Commit=$(COMMIT)
+#VAR_SETTING := -X $(PACKAGE_NAME)/constant.Version="$(VERSION)" -X $(PACKAGE_NAME)/constant.Commit="$(COMMIT)"
 GOBUILD = env CGO_ENABLED=0 $(GO_DIR)go build -tags "full" -ldflags="-s -w $(VAR_SETTING)" -o $(BUILD_DIR)
 
 .PHONY: trojan-go release
@@ -53,10 +53,11 @@ uninstall:
 	rm /usr/bin/geosite.dat
 
 %.zip: % geosite.dat geoip.dat
+	$(info >>> $(NAME)-$@)
 	@zip -du $(NAME)-$@ -j $(BUILD_DIR)/$</*
+	$(info <<< ---- $(NAME)-$@)
 	@zip -du $(NAME)-$@ example/*
 	@-zip -du $(NAME)-$@ *.dat
-	@echo "<<< ---- $(NAME)-$@"
 
 release: geosite.dat geoip.dat darwin-amd64.zip linux-386.zip linux-amd64.zip \
 	linux-arm.zip linux-armv5.zip linux-armv6.zip linux-armv7.zip linux-armv8.zip \

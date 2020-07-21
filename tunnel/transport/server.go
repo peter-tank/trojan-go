@@ -108,6 +108,10 @@ func (s *Server) AcceptPacket(tunnel.Tunnel) (tunnel.PacketConn, error) {
 func NewServer(ctx context.Context, _ tunnel.Server) (*Server, error) {
 	cfg := config.FromContext(ctx, Name).(*Config)
 	listenAddress := tunnel.NewAddressFromHostPort("tcp", cfg.LocalHost, cfg.LocalPort)
+	if cfg.TransportPlugin.Option == "" && cfg.TransportPlugin.Option2 != "" {
+		cfg.TransportPlugin.Option = cfg.TransportPlugin.Option2
+		log.Error(">>> will drop compactible with option 'plugin_option', use 'option' instead")
+	}
 
 	var cmd *exec.Cmd
 	if cfg.TransportPlugin.Enabled {

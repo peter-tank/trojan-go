@@ -149,6 +149,10 @@ func NewServer(ctx context.Context, underlay tunnel.Server) (*Server, error) {
 			return nil, common.NewError("websocket path must start with \"/\"")
 		}
 	}
+	if cfg.Websocket.Host == "" && cfg.Websocket.Host2 != "" {
+		cfg.Websocket.Host = cfg.Websocket.Host2
+		log.Error(">>> will drop compactible with option hostname, use host instead")
+	}
 	if cfg.RemoteHost == "" {
 		log.Warn("empty websocket redirection hostname")
 		cfg.RemoteHost = cfg.Websocket.Host

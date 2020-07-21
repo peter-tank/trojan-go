@@ -45,6 +45,7 @@ func (l *EmptyLogger) Fatal(v ...interface{}) { os.Exit(1) }
 
 func (l *EmptyLogger) Fatalf(format string, v ...interface{}) { os.Exit(1) }
 
+// Error print error message to output
 func (l *EmptyLogger) Error(v ...interface{}) {}
 
 func (l *EmptyLogger) Errorf(format string, v ...interface{}) {}
@@ -125,4 +126,29 @@ func SetOutput(w io.Writer) {
 
 func RegisterLogger(l Logger) {
 	logger = l
+}
+
+func ShortPath(file string, fn string) (string, string) {
+	depth := 2
+	short := file
+	for i := len(file) - 1; i > 0; i-- {
+		if file[i] == '/' {
+			short = file[i+1:]
+			break
+		}
+	}
+	file = short
+
+	short = fn
+	for i := len(fn) - 1; i > 0; i-- {
+		if fn[i] == '/' {
+			short = fn[i+1:]
+			depth--
+			if depth < 0 {
+				break
+			}
+		}
+	}
+
+	return file, short
 }
