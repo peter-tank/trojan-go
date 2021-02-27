@@ -40,7 +40,7 @@ func (s *Server) AcceptConn(tunnel.Tunnel) (tunnel.Conn, error) {
 		select {
 		case <-s.ctx.Done():
 		default:
-			log.Fatal(common.NewError("tproxy failed to accept connection").Base(err))
+			log.Warn(common.NewError("tproxy failed to accept connection").Base(err))
 		}
 		return nil, common.NewError("tproxy failed to accept conn")
 	}
